@@ -1,0 +1,84 @@
+//https://www.bilibili.com/video/BV1Y7411W73U/?from=search&seid=8449492405429354101&spm_id_from=333.337.0.0&vd_source=9376d11aba57e4419f548b269267a662
+#include "stdio.h"
+#include "math.h"
+#include "stdlib.h"
+
+#define MAX_COEF_N (2048)
+typedef float FFT_TYPE;
+#define FFT_SWAP(a0,a1,b0,b1,t0,t1) t0=a0;t1=a1;a0=b0;a1=b1;b0=t0;b1=t1
+#define COMPLEX_MULT(ra,ia,rb,ib,or,oi) or=ra*rb-ia*ib;oi=ra*ib+ia*rb
+
+void FFTcore(FFT_TYPE* reals,FFT_TYPE* imags, size_t n){
+    FFT_TYPE tempR = 0, tempI = 0;
+    size_t pos = 0, odpos = 0;
+    static unsigned short rev[MAX_COEF_N] = {0};
+    
+    size_t len = 0;
+    size_t lim = 1; 
+    while( lim < n ){ lim<<=1; ++len; }
+    
+    printf("lim %d len %d\r\n",lim,len); 
+	for( size_t i=0; i<lim; ++i ){
+	    pos    = (rev[i>>1]>>1) | ((i&1)<<(len-1));
+        rev[i] = pos;
+	}
+    for( size_t i=0; i<lim; ++i ){
+        pos = rev[i];
+        printf("%d %d\r\n",i,pos); 
+        if( i<pos ){
+        	FFT_SWAP(reals[i],imags[i],reals[pos],imags[pos],tempR,tempI);
+        }
+    }
+
+	  
+    printf("%f\r\n",log2(lim));
+    for( size_t dep=1; dep<=log2(lim); ++dep ){
+        size_t m    = 1<<dep;
+        size_t half = m>>1;
+        
+        FFT_TYPE ang = 6.283185307179586476925286766559/m;
+        FFT_TYPE wmr = cos(ang), wmi = sin(ang);
+        
+        for(size_t k=0; k<lim; k+=m ){
+        	FFT_TYPE wr = 1, wi = 0;
+        	FFT_TYPE tr = 0, ti = 0;
+        	FFT_TYPE ur = 0, ui = 0;
+            for(size_t j=0; j<half; ++j ){
+            	pos   = k+j;
+            	odpos = pos+half;
+				
+				COMPLEX_MULT(wr,wi,reals[odpos],imags[odpos], tr, ti);
+                ur = reals[pos];  
+				ui = imags[pos];
+                reals[pos]   = ur + tr;
+                imags[pos]   = ui + ti;
+                reals[odpos] = ur - tr;
+                imags[odpos] = ui - ti;
+				
+                tempR = wr*wmr - wi*wmi; 
+				tempI = wr*wmi + wi*wmr; 
+                
+				wr = tempR;
+				wi = tempI;
+            }
+        }
+    }
+}
+
+
+
+void main(){
+    //printf("FFT test\r\n");
+    #define N (16)
+    FFT_TYPE xr[N] = {1,2,3,4,5,6,7,8,8,7,6,5,4,3,2,1};
+    FFT_TYPE xi[N] = {0};
+    
+    //FFTinit(N);
+    FFTcore(xr,xi,N);
+    //IFFTinit(N);
+    //IFFTcore(xr,xi,N);    
+    
+    printf("-----------\r\n");
+    for(size_t i=0; i<N; ++i){ printf("<%8.4f %8.4f>\r\n",xr[i],xi[i]); }
+}
+

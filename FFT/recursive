@@ -1,0 +1,90 @@
+#include "stdio.h"
+#include "math.h"
+#include "stdlib.h"
+
+
+#define MAX_COEF_N (2048)
+#define GetW(n,k,r,i)do{\
+    static int init = 0;\
+    static float real[MAX_COEF_N] = {0};\
+    static float imag[MAX_COEF_N] = {0};\
+    if(!init){\
+        for(int i=0; i<MAX_COEF_N; ++i ){\
+            float ang = 6.2831853*i/MAX_COEF_N;\
+            real[i] = cos(ang);\
+            imag[i] = sin(ang);\
+        }\
+    }\
+    int pos = k*MAX_COEF_N/n;\
+    r = real[pos];\
+    i = imag[pos];\
+}while(0)
+
+#define ComplexMult(r0,i0,r1,i1) do{\
+    float rt = r0;\
+    float it = i0;\
+    r0 = rt*r1-it*i1;\
+    i0 = rt*i1+r1*it;\
+}while(0)
+
+void FFTcore(float* reals,float* imags, int n){
+    if(1==n){ return; }
+
+    int m=n>>1;
+      
+    float* temp = (float*)malloc(4*sizeof(float)*m);
+    float* realsEv = temp; 
+    float* imagsEv = temp+m;
+    float* realsOd = temp+m*2;
+    float* imagsOd = temp+m*3;
+    
+    for(int i=0,j=0; i<n; i+=2,++j ){
+        realsEv[j] = reals[i];
+        imagsEv[j] = imags[i];
+        realsOd[j] = reals[i+1];
+        imagsOd[j] = imags[i+1];
+    }
+
+    FFTcore(realsEv,imagsEv,m);
+    FFTcore(realsOd,imagsOd,m);
+    
+
+    int k = 0;
+    float wj_r = 0;
+    float wj_i = 0;
+    for(int j=0; j<m;++j ){
+        GetW(n,j,wj_r,wj_i);
+        ComplexMult(wj_r,wj_i,realsOd[j],imagsOd[j]);
+        
+        k = j;
+        reals[k] = realsEv[j]+wj_r;
+        imags[k] = imagsEv[j]+wj_i;
+
+        k = j+m;
+        reals[k] = realsEv[j]-wj_r;
+        imags[k] = imagsEv[j]-wj_i;
+    }
+
+
+    free(temp);
+}
+
+
+void main(){
+    printf("FFT test\r\n");
+    #define N (256)
+    float xr[N] = {1,2,3,-41,5,6,7,8};
+    float xi[N] = {0};
+    
+    for( int i=0; i<100; ++i ){
+        FFTcore(xr,xi,N);
+    }
+    
+    printf("-----------\r\n");
+    for(int i=0; i<N; ++i){
+        printf("<%8.4f %8.4f>\r\n",xr[i],xi[i]);
+    }
+}
+
+
+

@@ -1,0 +1,70 @@
+//可能需要修改，未测试
+
+gFFTreal = [];
+gFFTimag = [];
+gFFTrevs = [];
+function FFTinit(n){
+	gFFTreal = array_create(n);
+	gFFTimag = array_create(n);
+	gFFTrevs = array_create(n);
+    var lv = 0, pos = 0, ang = 0;
+    while( (1<<lv)<n ){ ++lv; }
+    for(var i=0; i<n; ++i ){
+        ang = -6.283185307179586476925286766559*i/n;
+        gFFTreal[i] = cos(ang);
+        gFFTimag[i] = sin(ang);
+        pos = (gFFTrevs[i>>1]>>1) |((i&1)<<(lv-1));
+        gFFTrevs[i] = pos;
+    }
+}
+
+function FFTcore(rs,is){
+	var reals = rs, imags = is, n = array_length(rs);
+    var tempR = 0, tempI = 0;
+    var pos = 0, lv = 0;
+	var gP = global.gFFTrevs;
+	var gR = global.gFFTreal;
+	var gI = global.gFFTimag;
+    for( var i=0; i<(n>>1); ++i ){
+        pos = gP[i];
+        if( pos == i ){ continue; }
+        tempR=reals[i];tempI=imags[i]; reals[i]=reals[pos];imags[i]=imags[pos]; reals[pos]=tempR;imags[pos]=tempI;
+    }
+    while( (1<<lv)<n ){ ++lv; }    
+    var wr = 0, wi = 0;
+    for( var dep=1; dep<=lv; ++dep ){
+        var m    = 1<<dep;
+        var half = m>>1;
+        var rat  = n>>dep;
+        for(var p=0; p<n; p+=m ){
+            pos = p;
+            var k = 0, odpos = pos+half;
+            for(var j=0; j<half; ++j ){
+                tempR = gR[k]; tempI = gI[k];
+                wr = reals[odpos]*tempR - imags[odpos]*tempI;
+                wi = reals[odpos]*tempI + imags[odpos]*tempR;
+                tempR = reals[pos];  tempI = imags[pos];
+                reals[pos]   = tempR + wr;
+                imags[pos]   = tempI + wi;
+                reals[odpos] = tempR - wr;
+                imags[odpos] = tempI - wi;
+                k += rat; ++pos; ++odpos;
+            }
+        }
+    }
+	array_copy(rs,0,reals,0,n);
+	array_copy(is,0,imags,0,n);
+}
+
+FFTinit(1024)
+
+function ShowCodeTime(loop,func){
+var ct = current_time;
+repeat(loop){ func(); }
+show_message( current_time - ct );
+}
+
+
+ShowCodeTime(1000,function(){
+	FFTcore(array_create(1024),array_create(1024))
+})
